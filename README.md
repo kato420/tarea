@@ -60,16 +60,12 @@ Cuando dos tensores tienen formas distintas pero compatibles, se aplica *broadca
 ### 3.4 Concatenación Multidimensional (`concat`)
 El método estático `Tensor::concat(tensores, dimension)` une una lista de tensores a lo largo de un eje específico:
 * Valida la compatibilidad dimensional estricta en todos los ejes distintos al de concatenación.
-* Calcula la forma resultante sumando las dimensiones del eje elegido:
-  $$\text{dim}_{\text{nueva}} = \sum_{t \in \text{tensores}} t.\text{forma}[\text{dimension}]$$
+* Calcula la forma resultante sumando las dimensiones del eje elegido: $\text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}]$.
 * Realiza una copia estructurada por bloques (*outer* e *inner slices*) que garantiza el orden contiguo correcto en memoria tanto para filas (eje 0), columnas (eje 1) o profundidad (eje 2).
 
 ### 3.5 Operaciones Algebraicas (Funciones Amigas)
-* `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño:
-  $$\text{dot}(a, b) = \sum_{i} a_i \cdot b_i$$
-* `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles:
-  $$A_{M \times K} \times B_{K \times N} \to C_{M \times N}$$
-  Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
+* `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño: $\text{dot}(a, b) = \sum a_i \cdot b_i$.
+* `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles ($A_{M \times K} \times B_{K \times N} \to C_{M \times N}$). Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
 
 ---
 
