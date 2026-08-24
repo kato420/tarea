@@ -1,0 +1,10 @@
+#!/usr/bin/fish
+
+if not test -d build
+    cmake -S . -B build -G Ninja > /dev/null 2>&1
+end
+
+if cmake --build build
+    echo ""
+    ./build/tarea
+end
