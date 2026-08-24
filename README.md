@@ -41,8 +41,8 @@ Para garantizar la integridad de la memoria y evitar fugas o doble liberación:
 ### 3.1 Métodos Estáticos de Creación
 * `Tensor::zeros(shape)`: Inicializa todas las posiciones en `0.0`.
 * `Tensor::ones(shape)`: Inicializa todas las posiciones en `1.0`.
-* `Tensor::random(shape, min, max)`: Genera valores aleatorios uniformemente distribuidos en el rango $[min, max)$ utilizando `std::mt19937` y `std::uniform_real_distribution`.
-* `Tensor::arange(inicio, fin)`: Crea un tensor 1D con valores secuenciales $[inicio, fin)$ con paso de $1.0$.
+* `Tensor::random(shape, min, max)`: Genera valores aleatorios uniformemente distribuidos en el rango $[\text{min}, \text{max})$ utilizando `std::mt19937` y `std::uniform_real_distribution`.
+* `Tensor::arange(inicio, fin)`: Crea un tensor 1D con valores secuenciales $[\text{inicio}, \text{fin})$ con paso de $1.0$.
 
 ### 3.2 Sobrecarga de Operadores y Sistema de Broadcasting
 Se sobrecargan los operadores aritméticos `+`, `-`, `*` (producto elemento a elemento de Hadamard) y `*` (multiplicación por escalar `double`).
@@ -60,12 +60,16 @@ Cuando dos tensores tienen formas distintas pero compatibles, se aplica *broadca
 ### 3.4 Concatenación Multidimensional (`concat`)
 El método estático `Tensor::concat(tensores, dimension)` une una lista de tensores a lo largo de un eje específico:
 * Valida la compatibilidad dimensional estricta en todos los ejes distintos al de concatenación.
-* Calcula la forma resultante sumando las dimensiones del eje elegido: $\text{dim\_res} = \sum t_i\text{.forma}[\text{dim}]$.
+* Calcula la forma resultante sumando las dimensiones del eje elegido:
+  $$\text{dim}_{\text{nueva}} = \sum_{t \in \text{tensores}} t.\text{forma}[\text{dimension}]$$
 * Realiza una copia estructurada por bloques (*outer* e *inner slices*) que garantiza el orden contiguo correcto en memoria tanto para filas (eje 0), columnas (eje 1) o profundidad (eje 2).
 
 ### 3.5 Operaciones Algebraicas (Funciones Amigas)
-* `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño: $\sum a_i \cdot b_i$.
-* `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles ($A_{M \times K} \times B_{K \times N} \to C_{M \times N}$). Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
+* `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño:
+  $$\text{dot}(a, b) = \sum_{i} a_i \cdot b_i$$
+* `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles:
+  $$A_{M \times K} \times B_{K \times N} \to C_{M \times N}$$
+  Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
 
 ---
 
@@ -76,7 +80,7 @@ En `src/main.cpp` se implementa el flujo de procesamiento completo de una red ne
 ### Flujo de Datos por Etapas
 
 | Paso | Operación | Dimensión Resultante | Tamaño Total (`size`) |
-|:---:|:---|:---:|:---:|
+| :---: | :--- | :---: | :---: |
 | **1** | Tensor de entrada (datos crudos) | $1000 \times 20 \times 20$ | $400\,000$ |
 | **2** | Aplanar características (`view`) | $1000 \times 400$ | $400\,000$ |
 | **3** | `matmul` con pesos $W_1$ ($400 \times 100$) | $1000 \times 100$ | $100\,000$ |

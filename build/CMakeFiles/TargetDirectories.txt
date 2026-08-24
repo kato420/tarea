@@ -1,3 +1,0 @@
-/home/cs/Desktop/tarea/build/CMakeFiles/tarea.dir
-/home/cs/Desktop/tarea/build/CMakeFiles/edit_cache.dir
-/home/cs/Desktop/tarea/build/CMakeFiles/rebuild_cache.dir

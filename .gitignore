@@ -1,0 +1,20 @@
+# Directorios de compilación
+build/
+bin/
+obj/
+
+# Caché y artefactos de compilación
+.cache/
+compile_commands.json
+*.o
+*.a
+*.so
+*.dylib
+
+# Archivos de editores e IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
