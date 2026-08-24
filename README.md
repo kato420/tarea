@@ -60,7 +60,8 @@ Cuando dos tensores tienen formas distintas pero compatibles, se aplica *broadca
 ### 3.4 Concatenación Multidimensional (`concat`)
 El método estático `Tensor::concat(tensores, dimension)` une una lista de tensores a lo largo de un eje específico:
 * Valida la compatibilidad dimensional estricta en todos los ejes distintos al de concatenación.
-* Calcula la forma resultante sumando las dimensiones del eje elegido: $\text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}]$.
+* Calcula la forma resultante sumando las dimensiones del eje elegido:
+$$ \text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}] $$
 * Realiza una copia estructurada por bloques (*outer* e *inner slices*) que garantiza el orden contiguo correcto en memoria tanto para filas (eje 0), columnas (eje 1) o profundidad (eje 2).
 
 ### 3.5 Operaciones Algebraicas (Funciones Amigas)
