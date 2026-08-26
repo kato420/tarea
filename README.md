@@ -1,6 +1,12 @@
 # Tensor++: Librería de Tensores en C++
 
-**Tensor++** es una biblioteca científica en C++20 inspirada en NumPy y PyTorch para el manejo eficiente de tensores de hasta 3 dimensiones (1D, 2D y 3D). Implementa gestión de memoria dinámica en un arreglo contiguo (`double*`), semántica de movimiento para operaciones sin copias innecesarias, sobrecarga de operadores con soporte completo de *broadcasting*, concatenación multidimensional y transformaciones algebraicas aplicadas a una red neuronal profunda.
+## 👥 Integrantes
+* **Estudiante 1:** [Nombre y Apellidos]
+* **Estudiante 2:** [Nombre y Apellidos]
+
+---
+
+**Tensor++** es una biblioteca científica en C++20 inspirada en NumPy y PyTorch para el manejo eficiente de tensores de hasta 3 dimensiones (1D, 2D y 3D). Implementa gestión de memoria dinámica en un arreglo contiguo (`double*`), semántica de movimiento para operaciones sin copias innecesarias, sobrecarga de operadores con soporte completo de *broadcasting* acelerado por plantillas (inlining), métodos de acceso e indexación encapsulados (`operator()` y `at()`), concatenación multidimensional y transformaciones algebraicas aplicadas a una red neuronal profunda.
 
 ---
 
@@ -8,11 +14,11 @@
 
 ```text
 tarea/
-├── CMakeLists.txt      # Configuración de compilación con CMake (C++20)
-├── run                 # Script automatizado de compilación y ejecución
-├── README.md           # Documentación técnica e instrucciones
+├── CMakeLists.txt      # Configuración de compilación CMake (C++20, Release por defecto)
+├── run                 # Script universal en Bash para compilación y ejecución rápida
+├── README.md           # Documentación técnica e informe
 └── src/
-    ├── main.cpp        # Pipeline y ejecución de la red neuronal
+    ├── main.cpp        # Pipeline de la red neuronal y funciones de activación
     ├── tensor.h        # Declaración de la clase Tensor y funciones amigas
     └── tensor.cpp      # Implementación completa de Tensor++
 ```
@@ -44,27 +50,35 @@ Para garantizar la integridad de la memoria y evitar fugas o doble liberación:
 * `Tensor::random(shape, min, max)`: Genera valores aleatorios uniformemente distribuidos en el rango $[\text{min}, \text{max})$ utilizando `std::mt19937` y `std::uniform_real_distribution`.
 * `Tensor::arange(inicio, fin)`: Crea un tensor 1D con valores secuenciales $[\text{inicio}, \text{fin})$ con paso de $1.0$.
 
-### 3.2 Sobrecarga de Operadores y Sistema de Broadcasting
-Se sobrecargan los operadores aritméticos `+`, `-`, `*` (producto elemento a elemento de Hadamard) y `*` (multiplicación por escalar `double`).
+### 3.2 Acceso a Elementos e Indexación Encapsulada
+Para evitar romper la encapsulación mediante punteros crudos, la librería provee operadores de indexación directa y segura:
+* **Indexación multidimensional (`operator()`):**
+  * 1D: `t(i)`
+  * 2D: `t(i, j)`
+  * 3D: `t(i, j, k)`
+* **Acceso general seguro (`at`):** `t.at({i, j, k})` valida la correspondencia de dimensiones y los límites de cada eje, lanzando `std::out_of_range` ante desbordamientos.
 
-#### Mecanismo de Broadcasting:
+### 3.3 Sobrecarga de Operadores y Sistema de Broadcasting
+Se sobrecargan los operadores aritméticos `+`, `-`, `*` (producto elemento a elemento de Hadamard) y `*` (multiplicación por escalar `double`). Todos validan consistencia y lanzan `std::invalid_argument` ante tensores vacíos o dimensiones incompatibles.
+
+#### Mecanismo de Broadcasting (Inlining con Templates):
 Cuando dos tensores tienen formas distintas pero compatibles, se aplica *broadcasting* multidimensional siguiendo el estándar de NumPy:
 1. Las dimensiones se alinean a la derecha rellenando con $1$ a la izquierda hasta igualar el rango.
 2. Dos dimensiones son compatibles si son iguales o si una de ellas es $1$.
 3. Se calculan *strides* adaptativos donde las dimensiones unitarias tienen paso $0$, permitiendo operar directamente matrices $N \times M$ con vectores de sesgo $1 \times M$ sin replicación explícita de memoria.
+4. Se implementa mediante una plantilla `template <typename Op>` que permite al compilador realizar *inlining* completo de la operación aritmética en el bucle interno, eliminando la sobrecarga de llamadas indirectas (`std::function`).
 
-### 3.3 Reorganización Dimensional (Zero-Copy)
+### 3.4 Reorganización Dimensional (Zero-Copy)
 * `view(nueva_forma)`: Reinterpreta la organización lógica de los datos sin duplicar memoria. Transfiere el búfer dinámico al nuevo tensor en $O(1)$ y deja el tensor original en un estado vacío seguro.
 * `unsqueeze(dimension)`: Inserta una dimensión de tamaño $1$ en la posición indicada sin copiar datos, validando que el rango resultante no exceda 3 dimensiones.
 
-### 3.4 Concatenación Multidimensional (`concat`)
+### 3.5 Concatenación Multidimensional (`concat`)
 El método estático `Tensor::concat(tensores, dimension)` une una lista de tensores a lo largo de un eje específico:
 * Valida la compatibilidad dimensional estricta en todos los ejes distintos al de concatenación.
-* Calcula la forma resultante sumando las dimensiones del eje elegido:
-$$ \text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}] $$
+* Calcula la forma resultante sumando las dimensiones del eje elegido: $\text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}]$.
 * Realiza una copia estructurada por bloques (*outer* e *inner slices*) que garantiza el orden contiguo correcto en memoria tanto para filas (eje 0), columnas (eje 1) o profundidad (eje 2).
 
-### 3.5 Operaciones Algebraicas y Utilidades (Funciones Amigas)
+### 3.6 Operaciones Algebraicas y Utilidades (Funciones Amigas)
 * `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño: $\text{dot}(a, b) = \sum a_i \cdot b_i$.
 * `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles ($A_{M \times K} \times B_{K \times N} \to C_{M \times N}$). Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
 * `friend std::ostream& operator<<(std::ostream& os, const Tensor& t)`: Sobrecarga para imprimir tensores formateados de 1D, 2D y 3D en flujos de salida estándar (`std::cout`).
@@ -96,17 +110,18 @@ En `src/main.cpp` se implementa el flujo de procesamiento completo de una red ne
 * Compilador de C++ con soporte para **C++20** (`g++ >= 11` o `clang++ >= 13`).
 * **CMake** versión 3.20 o superior.
 * Generador **Ninja** (recomendado) o **Make**.
+* Intérprete **Bash** (`/usr/bin/env bash`).
 
-### 5.2 Opción 1: Ejecución Rápida (Script)
-El repositorio incluye el script `run` para compilar incrementalmente y ejecutar en un solo paso:
+### 5.2 Opción 1: Ejecución Rápida (Script en Bash)
+El repositorio incluye el script `run` para compilar incrementalmente y ejecutar en un solo paso con compatibilidad universal:
 ```bash
 ./run
 ```
 
 ### 5.3 Opción 2: Compilación Manual con CMake
 ```bash
-# 1. Crear y configurar el directorio de construcción
-cmake -S . -B build -G Ninja
+# 1. Crear y configurar el directorio de construcción en modo Release (-O3)
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -G Ninja
 
 # 2. Compilar el proyecto
 cmake --build build

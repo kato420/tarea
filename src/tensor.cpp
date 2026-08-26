@@ -3,13 +3,16 @@
 #include <cmath>
 #include <random>
 
+// Constructor por defecto: deja el tensor vacío apuntando a null
 Tensor::Tensor() : datos(nullptr), tamano(0) {}
 
+// Constructor principal: calcula el tamaño total, valida que coincidan los datos y reserva el arreglo contiguo
 Tensor::Tensor(const std::vector<size_t> &shape,
                const std::vector<double> &values) {
   if (shape.empty() || shape.size() > 3) {
     throw std::invalid_argument("El tensor debe tener entre 1 y 3 dimensiones.");
   }
+
   tamano = 1;
   for (size_t dim : shape) {
     if (dim == 0) {
@@ -17,20 +20,24 @@ Tensor::Tensor(const std::vector<size_t> &shape,
     }
     tamano *= dim;
   }
+
   if (tamano != values.size()) {
-    throw std::invalid_argument("La cantidad de valores no coincide con el producto de las dimensiones.");
+    throw std::invalid_argument("La cantidad de valores no coincide con las dimensiones.");
   }
+
   forma = shape;
   datos = new double[tamano];
   std::copy(values.begin(), values.end(), datos);
 }
 
+// Destructor: libera la memoria dinámica con delete[] para evitar fugas de memoria
 Tensor::~Tensor() {
   delete[] datos;
   datos = nullptr;
   tamano = 0;
 }
 
+// Constructor de copia: reserva un bloque nuevo y copia todos los valores para no compartir punteros
 Tensor::Tensor(const Tensor &otro) : forma(otro.forma), tamano(otro.tamano) {
   if (otro.datos && tamano > 0) {
     datos = new double[tamano];
@@ -41,6 +48,7 @@ Tensor::Tensor(const Tensor &otro) : forma(otro.forma), tamano(otro.tamano) {
   }
 }
 
+// Operador de asignación por copia: maneja autoasignación y reemplaza la memoria actual por una copia profunda
 Tensor &Tensor::operator=(const Tensor &otro) {
   if (this != &otro) {
     double *nuevos_datos = nullptr;
@@ -56,12 +64,14 @@ Tensor &Tensor::operator=(const Tensor &otro) {
   return *this;
 }
 
+// Constructor de movimiento: transfiere el puntero del tensor origen en O(1) y lo deja en null
 Tensor::Tensor(Tensor &&otro) noexcept
     : forma(std::move(otro.forma)), datos(otro.datos), tamano(otro.tamano) {
   otro.datos = nullptr;
   otro.tamano = 0;
 }
 
+// Asignación por movimiento: libera la memoria actual y toma posesión del puntero del temporal
 Tensor &Tensor::operator=(Tensor &&otro) noexcept {
   if (this != &otro) {
     delete[] datos;
@@ -74,6 +84,7 @@ Tensor &Tensor::operator=(Tensor &&otro) noexcept {
   return *this;
 }
 
+// Crea un tensor lleno de ceros calculando el producto de dimensiones
 Tensor Tensor::zeros(const std::vector<size_t> &shape) {
   if (shape.empty() || shape.size() > 3) {
     throw std::invalid_argument("El tensor debe tener entre 1 y 3 dimensiones.");
@@ -86,6 +97,7 @@ Tensor Tensor::zeros(const std::vector<size_t> &shape) {
   return Tensor(shape, std::vector<double>(total, 0.0));
 }
 
+// Crea un tensor lleno de unos
 Tensor Tensor::ones(const std::vector<size_t> &shape) {
   if (shape.empty() || shape.size() > 3) {
     throw std::invalid_argument("El tensor debe tener entre 1 y 3 dimensiones.");
@@ -98,8 +110,8 @@ Tensor Tensor::ones(const std::vector<size_t> &shape) {
   return Tensor(shape, std::vector<double>(total, 1.0));
 }
 
-Tensor Tensor::random(const std::vector<size_t> &shape, double minimo,
-                      double maximo) {
+// Genera valores aleatorios continuos uniformes usando mt19937 en el rango [min, max)
+Tensor Tensor::random(const std::vector<size_t> &shape, double minimo, double maximo) {
   if (shape.empty() || shape.size() > 3) {
     throw std::invalid_argument("El tensor debe tener entre 1 y 3 dimensiones.");
   }
@@ -118,6 +130,7 @@ Tensor Tensor::random(const std::vector<size_t> &shape, double minimo,
   return Tensor(shape, valores);
 }
 
+// Crea un vector 1D con valores secuenciales desde inicio hasta fin con paso 1.0
 Tensor Tensor::arange(double inicio, double fin) {
   if (inicio >= fin) {
     throw std::invalid_argument("El valor de inicio debe ser menor al de fin en arange.");
@@ -129,13 +142,88 @@ Tensor Tensor::arange(double inicio, double fin) {
   return Tensor({valores.size()}, valores);
 }
 
-Tensor Tensor::operacion_con_broadcasting(
-    const Tensor &a, const Tensor &b,
-    const std::function<double(double, double)> &op) {
+// Acceso indexado para tensores 1D: t(i)
+double &Tensor::operator()(size_t i) {
+  if (forma.size() != 1 || i >= forma[0] || !datos) {
+    throw std::out_of_range("Índice 1D fuera de rango.");
+  }
+  return datos[i];
+}
+
+const double &Tensor::operator()(size_t i) const {
+  if (forma.size() != 1 || i >= forma[0] || !datos) {
+    throw std::out_of_range("Índice 1D fuera de rango.");
+  }
+  return datos[i];
+}
+
+// Acceso indexado para tensores 2D: t(i, j) = datos[i * cols + j]
+double &Tensor::operator()(size_t i, size_t j) {
+  if (forma.size() != 2 || i >= forma[0] || j >= forma[1] || !datos) {
+    throw std::out_of_range("Índices 2D fuera de rango.");
+  }
+  return datos[i * forma[1] + j];
+}
+
+const double &Tensor::operator()(size_t i, size_t j) const {
+  if (forma.size() != 2 || i >= forma[0] || j >= forma[1] || !datos) {
+    throw std::out_of_range("Índices 2D fuera de rango.");
+  }
+  return datos[i * forma[1] + j];
+}
+
+// Acceso indexado para tensores 3D: t(i, j, k)
+double &Tensor::operator()(size_t i, size_t j, size_t k) {
+  if (forma.size() != 3 || i >= forma[0] || j >= forma[1] || k >= forma[2] || !datos) {
+    throw std::out_of_range("Índices 3D fuera de rango.");
+  }
+  return datos[(i * forma[1] + j) * forma[2] + k];
+}
+
+const double &Tensor::operator()(size_t i, size_t j, size_t k) const {
+  if (forma.size() != 3 || i >= forma[0] || j >= forma[1] || k >= forma[2] || !datos) {
+    throw std::out_of_range("Índices 3D fuera de rango.");
+  }
+  return datos[(i * forma[1] + j) * forma[2] + k];
+}
+
+// Acceso genérico con vector de índices validando límites y calculando el índice aplanado
+double &Tensor::at(const std::vector<size_t> &indices) {
+  if (indices.size() != forma.size() || !datos) {
+    throw std::out_of_range("Cantidad de índices inválida.");
+  }
+  size_t flat_idx = 0;
+  for (size_t d = 0; d < forma.size(); ++d) {
+    if (indices[d] >= forma[d]) {
+      throw std::out_of_range("Índice fuera de límites.");
+    }
+    flat_idx = flat_idx * forma[d] + indices[d];
+  }
+  return datos[flat_idx];
+}
+
+const double &Tensor::at(const std::vector<size_t> &indices) const {
+  if (indices.size() != forma.size() || !datos) {
+    throw std::out_of_range("Cantidad de índices inválida.");
+  }
+  size_t flat_idx = 0;
+  for (size_t d = 0; d < forma.size(); ++d) {
+    if (indices[d] >= forma[d]) {
+      throw std::out_of_range("Índice fuera de límites.");
+    }
+    flat_idx = flat_idx * forma[d] + indices[d];
+  }
+  return datos[flat_idx];
+}
+
+// Lógica de broadcasting multidimensional estilo NumPy optimizada con templates para inlining
+template <typename Op>
+Tensor Tensor::operacion_con_broadcasting(const Tensor &a, const Tensor &b, Op op) {
   if (a.forma.empty() || b.forma.empty() || !a.datos || !b.datos) {
     throw std::invalid_argument("No se pueden operar tensores vacíos.");
   }
 
+  // Caso rápido: si tienen la misma dimensión exacta, operamos linealmente
   if (a.forma == b.forma) {
     std::vector<double> res(a.tamano);
     for (size_t i = 0; i < a.tamano; ++i) {
@@ -146,9 +234,10 @@ Tensor Tensor::operacion_con_broadcasting(
 
   size_t rank = std::max(a.forma.size(), b.forma.size());
   if (rank > 3) {
-    throw std::invalid_argument("El número máximo de dimensiones soportado es 3.");
+    throw std::invalid_argument("Máximo 3 dimensiones permitidas.");
   }
 
+  // Alinear dimensiones a la derecha rellenando con 1s a la izquierda
   std::vector<size_t> sa(rank, 1);
   std::vector<size_t> sb(rank, 1);
   for (size_t i = 0; i < a.forma.size(); ++i) {
@@ -158,6 +247,7 @@ Tensor Tensor::operacion_con_broadcasting(
     sb[rank - b.forma.size() + i] = b.forma[i];
   }
 
+  // Comprobar compatibilidad y calcular la forma del tensor resultante
   std::vector<size_t> forma_salida(rank);
   size_t total_salida = 1;
   for (size_t i = 0; i < rank; ++i) {
@@ -173,6 +263,7 @@ Tensor Tensor::operacion_con_broadcasting(
     total_salida *= forma_salida[i];
   }
 
+  // Calcular strides (si la dimensión es 1, el stride es 0 para repetir el elemento)
   std::vector<size_t> strides_a(rank, 0);
   std::vector<size_t> strides_b(rank, 0);
 
@@ -192,6 +283,7 @@ Tensor Tensor::operacion_con_broadcasting(
   std::vector<double> res(total_salida);
   std::vector<size_t> coords(rank, 0);
 
+  // Recorrer todas las posiciones calculando los offsets de cada tensor
   for (size_t idx = 0; idx < total_salida; ++idx) {
     size_t off_a = 0;
     size_t off_b = 0;
@@ -202,6 +294,7 @@ Tensor Tensor::operacion_con_broadcasting(
 
     res[idx] = op(a.datos[off_a], b.datos[off_b]);
 
+    // Avanzar el contador de coordenadas multidimensionales
     for (int r = static_cast<int>(rank) - 1; r >= 0; --r) {
       coords[r]++;
       if (coords[r] < forma_salida[r]) {
@@ -214,21 +307,25 @@ Tensor Tensor::operacion_con_broadcasting(
   return Tensor(forma_salida, res);
 }
 
+// Sobrecarga de suma (+) usando broadcasting
 Tensor Tensor::operator+(const Tensor &otro) const {
   return operacion_con_broadcasting(*this, otro, [](double x, double y) { return x + y; });
 }
 
+// Sobrecarga de resta (-) usando broadcasting
 Tensor Tensor::operator-(const Tensor &otro) const {
   return operacion_con_broadcasting(*this, otro, [](double x, double y) { return x - y; });
 }
 
+// Sobrecarga de multiplicación elemento a elemento (*) usando broadcasting
 Tensor Tensor::operator*(const Tensor &otro) const {
   return operacion_con_broadcasting(*this, otro, [](double x, double y) { return x * y; });
 }
 
+// Multiplicación por escalar: multiplica cada posición por el valor escalar
 Tensor Tensor::operator*(double valor) const {
-  if (tamano == 0 || !datos) {
-    return Tensor();
+  if (tamano == 0 || !datos || forma.empty()) {
+    throw std::invalid_argument("No se pueden operar tensores vacíos.");
   }
   std::vector<double> res(tamano);
   for (size_t i = 0; i < tamano; ++i) {
@@ -237,6 +334,7 @@ Tensor Tensor::operator*(double valor) const {
   return Tensor(forma, res);
 }
 
+// view: cambia la organización lógica transfiriendo el puntero sin copiar memoria
 Tensor Tensor::view(const std::vector<size_t> &nueva_forma) {
   if (nueva_forma.empty() || nueva_forma.size() > 3) {
     throw std::invalid_argument("La nueva forma debe tener entre 1 y 3 dimensiones.");
@@ -249,7 +347,7 @@ Tensor Tensor::view(const std::vector<size_t> &nueva_forma) {
     nuevo_tamano *= dim;
   }
   if (nuevo_tamano != tamano) {
-    throw std::invalid_argument("El número total de elementos debe coincidir para la operación view.");
+    throw std::invalid_argument("El número total de elementos debe coincidir para view.");
   }
 
   Tensor resultado;
@@ -257,6 +355,7 @@ Tensor Tensor::view(const std::vector<size_t> &nueva_forma) {
   resultado.tamano = tamano;
   resultado.datos = datos;
 
+  // Vaciamos el tensor actual para evitar doble liberación
   datos = nullptr;
   tamano = 0;
   forma.clear();
@@ -264,12 +363,13 @@ Tensor Tensor::view(const std::vector<size_t> &nueva_forma) {
   return resultado;
 }
 
+// unsqueeze: agrega una dimensión de tamaño 1 en la posición especificada sin mover datos
 Tensor Tensor::unsqueeze(size_t dimension) {
   if (forma.size() >= 3) {
     throw std::invalid_argument("No se puede hacer unsqueeze: el tensor ya tiene 3 dimensiones.");
   }
   if (dimension > forma.size()) {
-    throw std::invalid_argument("La dimensión indicada para unsqueeze está fuera de rango.");
+    throw std::invalid_argument("Dimensión fuera de rango.");
   }
 
   std::vector<size_t> nueva_forma = forma;
@@ -287,27 +387,29 @@ Tensor Tensor::unsqueeze(size_t dimension) {
   return resultado;
 }
 
+// concat: une múltiples tensores a lo largo de un eje copiando bloques contiguos
 Tensor Tensor::concat(const std::vector<Tensor> &tensores, size_t dimension) {
   if (tensores.empty()) {
-    throw std::invalid_argument("La lista de tensores para concatenar no puede estar vacía.");
+    throw std::invalid_argument("La lista de tensores no puede estar vacía.");
   }
 
   size_t rank = tensores[0].forma.size();
   if (rank == 0 || rank > 3) {
-    throw std::invalid_argument("Número de dimensiones inválido para concatenar.");
+    throw std::invalid_argument("Número de dimensiones inválido.");
   }
   if (dimension >= rank) {
-    throw std::invalid_argument("La dimensión de concatenación excede el rango del tensor.");
+    throw std::invalid_argument("Dimensión de concatenación fuera de rango.");
   }
 
+  // Validar que coincidan todas las demás dimensiones
   size_t total_dim_concat = 0;
   for (const auto &t : tensores) {
     if (t.forma.size() != rank) {
-      throw std::invalid_argument("Todos los tensores a concatenar deben tener el mismo número de dimensiones.");
+      throw std::invalid_argument("Todos los tensores deben tener el mismo rango.");
     }
     for (size_t d = 0; d < rank; ++d) {
       if (d != dimension && t.forma[d] != tensores[0].forma[d]) {
-        throw std::invalid_argument("Las dimensiones no concatenadas deben coincidir exactamente.");
+        throw std::invalid_argument("Las dimensiones no concatenadas deben coincidir.");
       }
     }
     total_dim_concat += t.forma[dimension];
@@ -323,6 +425,7 @@ Tensor Tensor::concat(const std::vector<Tensor> &tensores, size_t dimension) {
 
   std::vector<double> unidos(total_elementos);
 
+  // Copia estructurada en bloques (outer slices e inner slices)
   size_t outer_count = 1;
   for (size_t d = 0; d < dimension; ++d) {
     outer_count *= nueva_forma[d];
@@ -349,9 +452,10 @@ Tensor Tensor::concat(const std::vector<Tensor> &tensores, size_t dimension) {
   return Tensor(nueva_forma, unidos);
 }
 
+// dot: calcula el producto punto suma(a[i] * b[i]) para vectores 1D
 Tensor dot(const Tensor &a, const Tensor &b) {
   if (a.forma.size() != 1 || b.forma.size() != 1 || a.tamano != b.tamano) {
-    throw std::invalid_argument("dot requiere tensores unidimensionales (1D) de igual tamaño.");
+    throw std::invalid_argument("dot requiere tensores 1D del mismo tamaño.");
   }
   double suma = 0.0;
   for (size_t i = 0; i < a.tamano; ++i) {
@@ -360,9 +464,10 @@ Tensor dot(const Tensor &a, const Tensor &b) {
   return Tensor({1}, {suma});
 }
 
+// matmul: multiplicación de matrices A(M x K) * B(K x N) optimizada con bucle i-k-j para aprovechar la caché
 Tensor matmul(const Tensor &a, const Tensor &b) {
   if (a.forma.size() != 2 || b.forma.size() != 2 || a.forma[1] != b.forma[0]) {
-    throw std::invalid_argument("Dimensiones incompatibles para matmul (se requiere A[M,K] y B[K,N]).");
+    throw std::invalid_argument("Dimensiones incompatibles para matmul.");
   }
   size_t filas = a.forma[0];
   size_t comunes = a.forma[1];
@@ -380,6 +485,7 @@ Tensor matmul(const Tensor &a, const Tensor &b) {
   return Tensor({filas, columnas}, res);
 }
 
+// Sobrecarga de operator<< para imprimir el tensor formateado en la terminal
 std::ostream &operator<<(std::ostream &os, const Tensor &t) {
   if (t.forma.empty() || !t.datos || t.tamano == 0) {
     os << "Tensor([])";
