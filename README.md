@@ -64,9 +64,10 @@ El método estático `Tensor::concat(tensores, dimension)` une una lista de tens
 $$ \text{forma}_{\text{nueva}}[\text{dimension}] = \sum_{t} t.\text{forma}[\text{dimension}] $$
 * Realiza una copia estructurada por bloques (*outer* e *inner slices*) que garantiza el orden contiguo correcto en memoria tanto para filas (eje 0), columnas (eje 1) o profundidad (eje 2).
 
-### 3.5 Operaciones Algebraicas (Funciones Amigas)
+### 3.5 Operaciones Algebraicas y Utilidades (Funciones Amigas)
 * `friend Tensor dot(const Tensor& a, const Tensor& b)`: Calcula el producto punto entre dos tensores unidimensionales (1D) de igual tamaño: $\text{dot}(a, b) = \sum a_i \cdot b_i$.
 * `friend Tensor matmul(const Tensor& a, const Tensor& b)`: Multiplica dos matrices bidimensionales (2D) compatibles ($A_{M \times K} \times B_{K \times N} \to C_{M \times N}$). Utiliza un orden de iteración $(i, k, j)$ para maximizar la localidad espacial en la memoria caché.
+* `friend std::ostream& operator<<(std::ostream& os, const Tensor& t)`: Sobrecarga para imprimir tensores formateados de 1D, 2D y 3D en flujos de salida estándar (`std::cout`).
 
 ---
 
