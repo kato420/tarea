@@ -1,8 +1,10 @@
 # Tensor++: Librería de Tensores en C++
 
 ## 👥 Integrantes
-* **Estudiante 1:** [Nombre y Apellidos]
-* **Estudiante 2:** [Nombre y Apellidos]
+* **Estudiante 1:** [Avelina Luque Jayttara]
+* **Estudiante 2:** [Sandra Carolina Castro Gomez]
+* **Estudiante 3:** [Miguel Angel Flores Cárdenas]
+* **Estudiante 4:** [Alexis Huamán Yay]
 
 ---
 
